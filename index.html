@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>شجره‌نامه هوشمند خانوادگی | Shajareh Nameh</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ================= App Header ================= -->
+  <header class="app-header">
+    <div class="header-top">
+      <div class="brand-section">
+        <div class="brand-icon">🌳</div>
+        <div>
+          <h1 class="brand-title">شجره‌نامه هوشمند خانوادگی</h1>
+          <span class="brand-subtitle" id="headerMemberCount">سامانه تبارشناسی ژنتیک و سببی</span>
+        </div>
+      </div>
+
+      <!-- کنترل‌های خاندان (بی‌نهایت خاندان + حذف کل خاندان) -->
+      <div class="clan-controls">
+        <div class="clan-select-wrapper">
+          <span class="clan-label">خاندان:</span>
+          <select id="clanSelect" class="clan-dropdown" title="انتخاب یا ایجاد خاندان"></select>
+        </div>
+        <button id="btnCreateClan" class="btn btn-outline-primary btn-sm" title="ایجاد خاندان جدید">
+          ➕ ایجاد خاندان جدید
+        </button>
+        <button id="btnDeleteClan" class="btn btn-outline-danger btn-sm" title="حذف کامل این خاندان">
+          🗑️ حذف کل خاندان
+        </button>
+      </div>
+
+      <!-- دکمه‌های سریع عملیات -->
+      <div class="header-actions">
+        <button id="btnLoadDemo" class="btn btn-outline-secondary btn-sm" title="بارگذاری شجره‌نامه نمونه با تمام روابط پیچیده جهت بررسی">
+          💡 بارگذاری نمونه کامل
+        </button>
+        <button id="btnAddMember" class="btn btn-primary">
+          ➕ افزودن عضو جدید
+        </button>
+      </div>
+    </div>
+
+    <!-- تب‌های اصلی صفحه -->
+    <nav class="header-nav">
+      <button class="nav-tab-btn active" data-tab="tree">
+        🌳 نمای درختی شجره‌نامه
+      </button>
+      <button class="nav-tab-btn" data-tab="members">
+        👥 فهرست اعضای خاندان
+      </button>
+      <button class="nav-tab-btn" data-tab="ai">
+        🤖 رفع اشکالگر هوش مصنوعی (مدل GPT-6-SOL-MAX)
+      </button>
+    </nav>
+  </header>
+
+  <!-- ================= بنر فرد محوری فعال ================= -->
+  <div id="focalBanner" class="focal-banner" style="display: none;">
+    <div class="focal-badge-label">
+      <span>👑 فرد محوری فعال:</span>
+      <span id="focalPersonName" class="focal-person-highlight">---</span>
+    </div>
+    <div class="focal-hint">
+      نسبت تمام اعضا با این شخص سنجیده می‌شود. برای تغییر، روی هر عضو لمس یا کلیک کنید.
+    </div>
+  </div>
+
+  <!-- ================= بدنه اصلی تب‌ها ================= -->
+  <main class="main-container">
+
+    <!-- تب ۱: نمای درختی شجره‌نامه -->
+    <section id="view-tree" class="tab-view active">
+      <div id="treeContainer" class="tree-container"></div>
+
+      <!-- نوار ابزار کنترل زوم درخت -->
+      <div class="tree-toolbar">
+        <button id="btnZoomIn" class="tree-tool-btn" title="بزرگ‌نمایی">+</button>
+        <button id="btnZoomOut" class="tree-tool-btn" title="کوچک‌نمایی">−</button>
+        <button id="btnResetZoom" class="tree-tool-btn" title="بازنشانی زوم">↺</button>
+        <button id="btnFitTree" class="tree-tool-btn" title="تنظیم با صفحه">⛶</button>
+      </div>
+
+      <!-- راهنمای خطوط و نمادهای درخت -->
+      <div class="tree-legend">
+        <div class="legend-item">
+          <span class="legend-line paternal"></span>
+          <span>خط نسب پدری (حفظ اتصال دختر به پدر حتی در ازدواج فامیلی)</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-line maternal"></span>
+          <span>خط نسب مادری</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-line marriage"></span>
+          <span>خط پیوند زناشویی (💍 همسر)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- تب ۲: فهرست و کارت‌های اعضا -->
+    <section id="view-members" class="tab-view">
+      <div class="members-filter-bar">
+        <div class="search-input-wrap">
+          <input type="text" id="memberSearchInput" class="search-input" placeholder="🔍 جستجو در نام، نام خانوادگی...">
+        </div>
+        <select id="filterGenderSelect" class="form-select" style="max-width: 220px;">
+          <option value="all">نمایش تمام اعضا</option>
+          <option value="male">فقط مردان</option>
+          <option value="female">فقط زنان</option>
+          <option value="deceased">فوت‌شدگان</option>
+          <option value="historical">شخصیت‌های تاریخی</option>
+        </select>
+      </div>
+      <div id="membersListContainer" class="members-grid"></div>
+    </section>
+
+    <!-- تب ۳: هوش مصنوعی و رفع اشکالگر خودکار (GPT-6-SOL-MAX) -->
+    <section id="view-ai" class="tab-view">
+      <div class="ai-header-card">
+        <div class="ai-model-tag">⚡ مدل اختصاصی: GPT-6-SOL-MAX (فعال و کالیبره شده)</div>
+        <h2 class="ai-header-title">رفع اشکالگر هوشمند و پایش لحظه‌ای تبارنامه</h2>
+        <p class="ai-header-desc">
+          تحلیل پیشرفته پیوندهای نسَب و سبب بر مبنای قوانین ژنتیکی، تطبیق تاریخی و کشف ناهماهنگی‌های خانوادگی.
+          ارزیابی جامع روابط عروس (زن پسر) برای پدر شوهر و مادر شوهر، و داماد (شوهر دختر) برای پدر زن و مادر زن.
+        </p>
+        <div id="aiStatsBadge" class="ai-stats-pill">در حال آماده‌سازی گزارش...</div>
+      </div>
+
+      <!-- بخش دستور العمل کاربر به هوش مصنوعی -->
+      <div class="ai-instruction-box">
+        <div class="section-head">
+          <h3 class="section-title">💬 بخش دستور العمل هوش مصنوعی (مدل GPT-6-SOL-MAX)</h3>
+          <span class="text-muted small">دستور خود را به زبان فارسی بنویسید تا هوش مصنوعی فوراً اجرا کند:</span>
+        </div>
+
+        <div class="ai-instruction-input-wrap">
+          <textarea id="aiInstructionInput" class="ai-instruction-textarea" placeholder="مثلاً: نسبت‌های عروس و داماد را بررسی و ثبت کن، یا خطاهای زمانی و سنی را اصلاح نما..."></textarea>
+          <button id="btnRunAiInstruction" class="btn btn-primary" style="align-self: flex-start; padding: 12px 20px;">
+            ✨ اجرای دستور
+          </button>
+        </div>
+
+        <!-- چیپ‌های آماده دستورات متداول -->
+        <div class="prompt-chips-row">
+          <button class="ai-prompt-chip" data-prompt="نسبت های عروس و داماد را با مدل gpt-6-sol-max چک کن ببین اگر نیست اضافه کن">
+            💍 بررسی و تکمیل روابط عروس و داماد (GPT-6-SOL-MAX)
+          </button>
+          <button class="ai-prompt-chip" data-prompt="تناقضات تاریخ تولد و فوت و فاصله سنی والدین و فرزندان را بررسی و اصلاح کن">
+            ⏳ بررسی و اصلاح تضادهای زمانی و سنی
+          </button>
+          <button class="ai-prompt-chip" data-prompt="پیوندهای دوطرفه همسری و والدینی را همگام‌سازی کن">
+            🔄 همگام‌سازی دوطرفه پیوندهای متقابل
+          </button>
+          <button class="ai-prompt-chip" data-prompt="تحلیل جامع سلامت کل شجره‌نامه">
+            🚀 پایش جامع ساختار خانوادگی
+          </button>
+        </div>
+
+        <!-- ترمینال لاگ استدلال هوش مصنوعی -->
+        <div id="aiConsoleLogs" class="ai-console-terminal">
+          <div class="console-line">[GPT-6-SOL-MAX] آماده دریافت و پردازش دستور العمل‌های تبارشناسی...</div>
+        </div>
+      </div>
+
+      <!-- بخش اختصاصی احراز عروس و داماد مدل GPT-6-SOL-MAX -->
+      <div class="ai-bride-groom-section">
+        <div class="section-head">
+          <h3 class="section-title">
+            <span>💍 احراز روابط عروس و داماد (بر اساس مدل GPT-6-SOL-MAX)</span>
+          </h3>
+          <span class="text-muted small">عروس (زن پسر) برای پدر/مادر شوهر | داماد (شوهر دختر) برای پدر/مادر زن</span>
+        </div>
+        <div id="aiBrideGroomContainer" class="ai-bride-groom-list"></div>
+      </div>
+
+      <!-- بخش گزارش اشکالات، هشدارها و Auto-Fix -->
+      <div class="ai-issues-section">
+        <div class="section-head">
+          <div>
+            <h3 class="section-title">🛠️ وضعیت عیب‌یابی و ناسازگاری‌های شجره‌نامه</h3>
+            <span id="aiSummaryText" class="text-muted small">در حال تحلیل...</span>
+          </div>
+          <button id="btnAiAutoFixAll" class="btn btn-outline-success">
+            ⚡ اصلاح خودکار همه موارد (One-Click Auto-Fix)
+          </button>
+        </div>
+        <div id="aiIssuesContainer" class="ai-issues-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ================= Modal: افزودن / ویرایش عضو ================= -->
+  <div id="memberModal" class="modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <h3 id="memberModalTitle" class="modal-title">افزودن عضو جدید</h3>
+        <button type="button" class="modal-close">&times;</button>
+      </div>
+
+      <form id="memberForm">
+        <div class="modal-body">
+          <div id="memberRelationNotice" class="alert alert-info" style="display: none; background: #e0f2fe; padding: 10px; border-radius: 6px; font-size: 13px; color: #0369a1;"></div>
+
+          <!-- نام و نام خانوادگی و جنسیت -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="memberFirstName">نام: *</label>
+              <input type="text" id="memberFirstName" class="form-control" placeholder="مثال: علی" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="memberLastName">نام خانوادگی: *</label>
+              <input type="text" id="memberLastName" class="form-control" placeholder="مثال: علوی" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="memberGender">جنسیت:</label>
+              <select id="memberGender" class="form-select">
+                <option value="male">مرد</option>
+                <option value="female">زن</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- وضعیت حیات و شخصیت تاریخی -->
+          <div class="form-row">
+            <label class="form-check">
+              <input type="checkbox" id="isHistoricalCheck">
+              <span>🏛️ شخصیت تاریخی / کهن (نمایش قبل و بعد از میلاد)</span>
+            </label>
+            <label class="form-check">
+              <input type="checkbox" id="isDeceasedCheck">
+              <span>🖤 فوت شده (در قید حیات نیست)</span>
+            </label>
+          </div>
+
+          <!-- دکمه‌های انتخاب تقویم شمسی، میلادی، قمری -->
+          <!-- مورد تأکید کاربر: دکمه تاریخ میلادی و شمسی و قمری را جداگانه و دستی اضافه کن -->
+          <div class="calendar-selection-block">
+            <label class="form-label">نوع تقویم ورودی تاریخ‌ها:</label>
+            <div class="calendar-type-tabs">
+              <button type="button" class="btn-cal-tab btn-cal-birth active" data-cal="jalali">☀️ تقویم هجری خورشیدی (شمسی)</button>
+              <button type="button" class="btn-cal-tab btn-cal-birth" data-cal="gregorian">🌍 تقویم میلادی (Gregorian)</button>
+              <button type="button" class="btn-cal-tab btn-cal-birth" data-cal="hijri">🌙 تقویم هجری قمری</button>
+            </div>
+          </div>
+
+          <!-- تاریخ تولد -->
+          <div class="form-group">
+            <label class="form-label">تاریخ تولد:</label>
+            <div class="form-row">
+              <!-- Era selector: قبل/بعد از میلاد فقط برای افراد تاریخی -->
+              <div id="birthEraGroup" class="form-group" style="display: none; max-width: 170px;">
+                <label class="form-label" for="birthEra">دوران تاریخی:</label>
+                <select id="birthEra" class="form-select">
+                  <option value="BC">قبل از میلاد (ق.م)</option>
+                  <option value="AD">بعد از میلاد (ب.م)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label id="birthYearLabel" class="form-label" for="birthYear">سال تولد:</label>
+                <input type="number" id="birthYear" class="form-control" placeholder="مثال: 1365 یا 550">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="birthMonth">ماه:</label>
+                <input type="number" id="birthMonth" class="form-control" min="1" max="12" placeholder="1 تا 12">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="birthDay">روز:</label>
+                <input type="number" id="birthDay" class="form-control" min="1" max="31" placeholder="1 تا 31">
+              </div>
+            </div>
+          </div>
+
+          <!-- تاریخ وفات در صورت فوت -->
+          <div id="deathDateSection" class="form-group" style="display: none;">
+            <label class="form-label">تاریخ وفات / درگذشت:</label>
+            <div class="form-row">
+              <div id="deathEraGroup" class="form-group" style="display: none; max-width: 170px;">
+                <label class="form-label" for="deathEra">دوران تاریخی:</label>
+                <select id="deathEra" class="form-select">
+                  <option value="BC">قبل از میلاد (ق.م)</option>
+                  <option value="AD">بعد از میلاد (ب.م)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label id="deathYearLabel" class="form-label" for="deathYear">سال وفات:</label>
+                <input type="number" id="deathYear" class="form-control" placeholder="مثال: 1400 یا 530">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="deathMonth">ماه:</label>
+                <input type="number" id="deathMonth" class="form-control" min="1" max="12" placeholder="1 تا 12">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="deathDay">روز:</label>
+                <input type="number" id="deathDay" class="form-control" min="1" max="31" placeholder="1 تا 31">
+              </div>
+            </div>
+          </div>
+
+          <!-- آپلود عکس پروفایل -->
+          <div class="form-group">
+            <label class="form-label">تصویر چهره / پرتره:</label>
+            <div class="photo-upload-row">
+              <div id="photoPreviewContainer" class="photo-preview-box">
+                <span id="photoPlaceholder" style="font-size: 26px;">👤</span>
+                <img id="photoPreviewImg" src="" alt="پیش‌نمایش" style="display: none;">
+              </div>
+              <div>
+                <input type="file" id="photoInput" accept="image/*" class="form-control">
+                <small class="text-muted">فرمت‌های JPG، PNG، WebP (حداکثر ۵ مگابایت)</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- ================= بخش توضیحات اضافه (علایق، فیلم، صوت، عکس) ================= -->
+          <!-- مورد تأکید کاربر: یک بخش توضیحات اضافه داشته باشیم که در آن، قسمت های علایق، فیلم، صوت، عکس باشد -->
+          <div class="extra-details-block" style="background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid #e2e8f0;">
+            <h4 style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: #0f766e;">
+              ✨ بخش توضیحات و رسانه‌های تکمیلی
+            </h4>
+
+            <!-- علایق -->
+            <div class="form-group">
+              <label class="form-label">علایق و سرگرمی‌ها (امکان انتخاب و افزودن برچسب‌های دلخواه):</label>
+              <div class="d-flex" style="display: flex; gap: 8px; margin-bottom: 8px;">
+                <input type="text" id="customInterestInput" class="form-control" placeholder="نوشتن علاقه جدید و زدن اینتر...">
+                <button type="button" id="btnAddCustomInterest" class="btn btn-outline-primary btn-sm">+ افزودن علاقه</button>
+              </div>
+              <div id="interestChipsContainer" class="interest-chips-container"></div>
+            </div>
+
+            <!-- فیلم -->
+            <div class="form-group" style="margin-top: 14px;">
+              <label class="form-label">فیلم و ویدیو (کلیپ خاطرات / مستند):</label>
+              <input type="file" id="videoFileInput" accept="video/mp4,video/webm" class="form-control">
+              <small class="text-muted">انتخاب فایل ویدیویی از دستگاه جهت پخش درون‌برنامه‌ای</small>
+            </div>
+
+            <!-- صوت -->
+            <div class="form-group" style="margin-top: 14px;">
+              <label class="form-label">صوت و فایل صوتی (صدای ضبط شده / خاطره صوتی):</label>
+              <input type="file" id="audioFileInput" accept="audio/*" class="form-control">
+              <small class="text-muted">انتخاب فایل صوتی با فرمت MP3 یا WAV</small>
+            </div>
+
+            <!-- آلبوم عکس‌ها -->
+            <div class="form-group" style="margin-top: 14px;">
+              <label class="form-label">آلبوم عکس‌ها و اسناد تاریخی (چندتایی):</label>
+              <input type="file" id="galleryInput" accept="image/*" multiple class="form-control">
+              <div id="galleryThumbnailsContainer" class="gallery-thumbs"></div>
+            </div>
+
+            <!-- زندگی‌نامه و یادداشت -->
+            <div class="form-group" style="margin-top: 14px;">
+              <label class="form-label" for="memberBiography">زندگی‌نامه، افتخارات و یادداشت‌های تکمیلی:</label>
+              <textarea id="memberBiography" class="form-control" rows="3" placeholder="توضیحات درباره زندگی، شغل، ویژگی‌های برجسته..."></textarea>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary modal-close">انصراف</button>
+          <button type="submit" class="btn btn-primary">💾 ذخیره اطلاعات عضو</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= Modal: افزودن فامیل‌ها ================= -->
+  <!-- مورد تأکید کاربر:
+       برای هر شخص یک بخش افزودن فامیل ها داریم در قسمت افزودن فامیل ها، پدر ، مادر، خواهر ها، برادر ها ، فرزندان، همسر ها باشد
+       و اگر به اصطلاح کسی تعریف نشده باشد از همان قسمت گزینه ای ایجاد شود که بتوان به قسمت افزودن عضو جدید رفت.
+       رعایت قانون خروج اعضای دارای پیوند از لیست در دسترس. -->
+  <div id="relativesModal" class="modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <span>مدیریت فامیل‌ها و روابط برای: </span>
+          <span id="relativesModalPersonName" style="color: var(--primary);">---</span>
+        </h3>
+        <button type="button" class="modal-close">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="text-muted small" style="margin-bottom: 14px;">
+          📌 اعضایی که پیش از این برای نقش‌های دیگر ثبت شده‌اند، به طور خودکار از لیست گزینه‌ها خارج شده‌اند تا از تداخل رابطه جلوگیری شود.
+          اگر فرد مورد نظر هنوز در سیستم تعریف نشده، دکمه «➕ تعریف عضو جدید» را بزنید.
+        </p>
+
+        <div id="relativesSectionsContainer" class="relatives-sections"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary modal-close">بستن پنجره</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Modal: مشاهده پروفایل کامل ================= -->
+  <div id="profileModal" class="modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <h3 class="modal-title">شناسنامه و روابط خانوادگی</h3>
+        <button type="button" class="modal-close">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="profile-hero">
+          <div class="profile-avatar-large">
+            <span id="profileAvatarEmoji">👤</span>
+            <img id="profileAvatarImg" src="" alt="عکس پروفایل" style="display: none;">
+          </div>
+          <div class="profile-hero-info">
+            <h2 id="profileFullName" class="profile-full-name">---</h2>
+            <div id="profileKinshipBadge" class="kinship-highlight-badge">---</div>
+          </div>
+        </div>
+
+        <div class="profile-grid-info">
+          <div>
+            <span class="info-item-label">تاریخ تولد:</span>
+            <span id="profileBirthDate" class="info-item-val">---</span>
+          </div>
+          <div>
+            <span class="info-item-label">وضعیت حیات:</span>
+            <span id="profileDeathDate" class="info-item-val">---</span>
+          </div>
+          <div>
+            <span class="info-item-label">سن:</span>
+            <span id="profileAge" class="info-item-val">---</span>
+          </div>
+        </div>
+
+        <!-- فهرست روابط و فامیل‌ها (والدین، همسران، فرزندان، خواهران و برادران، نوه‌ها) -->
+        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+          <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: #334155;">
+            🌿 شبکه خویشاوندان مستقیم:
+          </h4>
+          <div id="profileRelativesSummary"></div>
+        </div>
+
+        <!-- رسانه‌ها و علایق -->
+        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+          <h4 style="font-size: 14px; font-weight: 700; color: #334155;">
+            🎨 علایق، رسانه‌ها و یادداشت‌ها:
+          </h4>
+
+          <!-- علایق -->
+          <div>
+            <span class="info-item-label" style="margin-bottom: 6px;">علایق:</span>
+            <div id="profileInterestsDisplay" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+          </div>
+
+          <!-- پخش ویدیو -->
+          <div id="profileVideoDisplay" style="display: none;">
+            <span class="info-item-label" style="margin-bottom: 6px;">فیلم و ویدیو:</span>
+            <video id="profileVideoPlayer" controls style="max-width: 100%; max-height: 280px; border-radius: 8px; background: black;"></video>
+          </div>
+
+          <!-- پخش صوت -->
+          <div id="profileAudioDisplay" style="display: none;">
+            <span class="info-item-label" style="margin-bottom: 6px;">صوت و خاطره صوتی:</span>
+            <audio id="profileAudioPlayer" controls style="width: 100%;"></audio>
+          </div>
+
+          <!-- گالری عکس‌ها -->
+          <div>
+            <span class="info-item-label" style="margin-bottom: 6px;">آلبوم تصاویر و اسناد:</span>
+            <div id="profileGalleryDisplay" class="gallery-thumbs"></div>
+          </div>
+
+          <!-- زندگی‌نامه -->
+          <div>
+            <span class="info-item-label" style="margin-bottom: 4px;">زندگی‌نامه و یادداشت:</span>
+            <p id="profileBioDisplay" style="font-size: 13px; color: #334155; line-height: 1.6;"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="profileBtnSetFocal" class="btn btn-warning">⭐ انتخاب به عنوان فرد محوری</button>
+        <button id="profileBtnManageRelatives" class="btn btn-outline-secondary">🔗 مدیریت فامیل‌ها</button>
+        <button id="profileBtnEdit" class="btn btn-primary">✏️ ویرایش اطلاعات</button>
+        <button id="profileBtnDelete" class="btn btn-outline-danger">🗑️ حذف عضو</button>
+        <button type="button" class="btn btn-outline-secondary modal-close">بستن</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Modal: لایت‌باکس عکس ================= -->
+  <div id="lightboxModal" class="modal lightbox-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog">
+      <img id="lightboxImg" class="lightbox-img" src="" alt="نمایش بزرگ">
+    </div>
+  </div>
+
+  <!-- کانتینر پیام‌های Toast -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- ماژول‌های جاوااسکریپت ۱۰۰٪ محلی و بدون وابستگی خارجی -->
+  <script src="js/calendar.js"></script>
+  <script src="js/kinship.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/tree.js"></script>
+  <script src="js/ai-debugger.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
